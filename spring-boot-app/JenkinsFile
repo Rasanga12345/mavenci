@@ -10,10 +10,8 @@ pipeline {
 
     stage('Checkout') {
       steps {
-        // If you want Jenkins to actually checkout your repo, uncomment:
-        // checkout scm
         sh 'echo passed'
-        sh 'ls -la'
+        //git branch: 'main', url: 'https://github.com/iam-veeramalla/Jenkins-Zero-To-Hero.git'
       }
     }
 
