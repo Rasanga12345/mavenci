@@ -2,35 +2,50 @@ pipeline {
   agent {
     docker {
       image 'abhishekf5/maven-abhishek-docker-agent:v1'
-      args '--user root -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.m2:/root/.m2'
+      args '--user root -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/jenkins/.m2:/root/.m2'
     }
+  }
+
+  options {
+    skipDefaultCheckout(true)
   }
 
   stages {
 
+    stage('Checkout') {
+      steps {
+        checkout scm
+        stash name: 'src', includes: '**/*', useDefaultExcludes: false
+      }
+    }
+
     stage('Build and Test') {
       steps {
+        unstash 'src'
         sh '''
           set -e
           ls -ltr
           cd spring-boot-app
           mvn -B clean package
         '''
+        stash name: 'built-src', includes: '**/*', useDefaultExcludes: false
       }
     }
 
-    // ✅ Run Sonar with Java 17 (fixes class file version 61 vs 55 issue)
+    // ✅ Run Sonar with Java 17
     stage('Static Code Analysis') {
       agent {
         docker {
           image 'maven:3.9.9-eclipse-temurin-17'
-          args '-v $HOME/.m2:/root/.m2'
+          args '-v /var/lib/jenkins/.m2:/root/.m2'
+          reuseNode true
         }
       }
       environment {
         SONAR_URL = "http://54.242.16.110:9000"
       }
       steps {
+        unstash 'built-src'
         withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
           sh '''
             set -e
@@ -49,9 +64,9 @@ pipeline {
     stage('Build and Push Docker Image') {
       environment {
         DOCKER_IMAGE = "rasangajayaweera/ultimate-cicd:${BUILD_NUMBER}"
-        REGISTRY_CREDENTIALS = credentials('docker-cred')
       }
       steps {
+        unstash 'built-src'
         script {
           sh '''
             set -e
@@ -72,19 +87,16 @@ pipeline {
         GIT_USER_NAME = "Rasanga12345"
       }
       steps {
+        unstash 'built-src'
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
           sh '''
             set -e
-
             git config user.email "jayaweerarasanga@gmail.com"
             git config user.name "Rasanga12345"
 
-            # Update manifest image tag
             sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" spring-boot-app-manifests/deployment.yml
 
             git add spring-boot-app-manifests/deployment.yml
-
-            # Don't fail if nothing changed
             git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
 
             git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
