@@ -74,28 +74,28 @@ pipeline {
             pwd
             ls -la
     
-            # sanity check
+            # ✅ FIX: allow git to operate even if ownership looks "dubious"
+            git config --global --add safe.directory "$WORKSPACE"
+    
+            # now git works
             git -C "$WORKSPACE" rev-parse --is-inside-work-tree
             git -C "$WORKSPACE" status
     
-            # configure identity (local to this repo)
             git -C "$WORKSPACE" config user.email "jayaweerarasanga@gmail.com"
             git -C "$WORKSPACE" config user.name "Rasanga Jayaweera"
     
-            # update manifest
             sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" "$WORKSPACE/spring-boot-app-manifests/deployment.yml"
     
-            # commit only if there is a change
             git -C "$WORKSPACE" add spring-boot-app-manifests/deployment.yml
             git -C "$WORKSPACE" diff --cached --quiet || git -C "$WORKSPACE" commit -m "Update deployment image to version ${BUILD_NUMBER}"
     
-            # push using token (don’t use Groovy interpolation)
             git -C "$WORKSPACE" remote set-url origin "https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git"
             git -C "$WORKSPACE" push origin HEAD:main
           '''
         }
       }
     }
+
 
 
   }
