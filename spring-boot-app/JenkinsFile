@@ -70,29 +70,22 @@ pipeline {
         checkout scm
 
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-          sh '''
-            set -e
-        
-            # If Jenkins or tools set these, Git ignores the local .git and fails
-            unset GIT_DIR
-            unset GIT_WORK_TREE
-        
-            echo "WORKSPACE=$WORKSPACE"
+          sh """
+
+            pwd
             ls -la
-            ls -la .git
-            git -C "$WORKSPACE" rev-parse --is-inside-work-tree
-        
-            git -C "$WORKSPACE" config user.email "jayaweerarasanga@gmail.com"
-            git -C "$WORKSPACE" config user.name "Rasanga Jayaweera"
-        
+            git config user.email "jayaweerarasanga@gmail.com"
+            git config user.name "Rasanga Jayaweera"
+
+            BUILD_NUMBER=${BUILD_NUMBER}
+
             sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" spring-boot-app-manifests/deployment.yml
-        
-            git -C "$WORKSPACE" add spring-boot-app-manifests/deployment.yml
-            git -C "$WORKSPACE" commit -m "Update deployment image to version ${BUILD_NUMBER}" || true
-        
-            # safer than Groovy interpolation
-            git -C "$WORKSPACE" push https://$GITHUB_TOKEN@github.com/Rasanga12345/mavenci.git HEAD:main
-          '''
+
+            git add spring-boot-app-manifests/deployment.yml
+            git commit -m "Update deployment image to version ${BUILD_NUMBER}" || true
+
+            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+          """
         }
       }
     }
