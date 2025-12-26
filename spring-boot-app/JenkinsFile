@@ -30,8 +30,6 @@ pipeline {
       }
       steps {
 
-        checkout scm
-
         withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
           sh """
             cd spring-boot-app
@@ -68,8 +66,14 @@ pipeline {
         GIT_USER_NAME = "Rasanga12345"
       }
       steps {
+
+        checkout scm
+
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
           sh """
+
+            pwd
+            ls -la
             git config user.email "jayaweerarasanga@gmail.com"
             git config user.name "Rasanga Jayaweera"
 
