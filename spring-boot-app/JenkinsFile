@@ -29,6 +29,9 @@ pipeline {
         SONAR_URL = "http://54.162.201.227:9000"
       }
       steps {
+
+        checkout scm
+
         withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
           sh """
             cd spring-boot-app
